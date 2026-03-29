@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Generator — Editor Dashboard</title>
+    <meta name="description" content="Editor dashboard for the automated book generation system">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a28;
+            --bg-card-hover: #222235;
+            --bg-input: #0f0f1a;
+            --border: #2a2a3d;
+            --border-focus: #6366f1;
+            --text-primary: #e8e8f0;
+            --text-secondary: #9999b3;
+            --text-muted: #666680;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --accent-glow: rgba(99,102,241,0.25);
+            --success: #10b981;
+            --success-bg: rgba(16,185,129,0.12);
+            --warning: #f59e0b;
+            --warning-bg: rgba(245,158,11,0.12);
+            --danger: #ef4444;
+            --danger-bg: rgba(239,68,68,0.12);
+            --info: #3b82f6;
+            --info-bg: rgba(59,130,246,0.12);
+            --radius: 12px;
+            --radius-sm: 8px;
+            --shadow: 0 4px 24px rgba(0,0,0,0.4);
+            --transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* ── Header ─────────────────────────── */
+        .header {
+            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card));
+            border-bottom: 1px solid var(--border);
+            padding: 1.25rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(20px);
+        }
+        .header h1 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .header-actions { display: flex; gap: 0.75rem; }
+
+        /* ── Buttons ────────────────────────── */
+        .btn {
+            padding: 0.5rem 1.1rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.82rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .btn:hover { background: var(--bg-card-hover); border-color: var(--accent); }
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+        .btn-success { background: var(--success); border-color: var(--success); color: #fff; }
+        .btn-success:hover { opacity: 0.9; }
+        .btn-danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+        .btn-sm { padding: 0.35rem 0.8rem; font-size: 0.78rem; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+        /* ── Layout ─────────────────────────── */
+        .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem 2rem; }
+
+        /* ── Cards ──────────────────────────── */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: var(--transition);
+        }
+        .card:hover { border-color: var(--border-focus); box-shadow: var(--shadow); }
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        .card-title { font-size: 1.1rem; font-weight: 600; }
+
+        /* ── Status Badges ──────────────────── */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.2rem 0.7rem;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .badge-pending { background: var(--warning-bg); color: var(--warning); }
+        .badge-generated, .badge-outline_generated { background: var(--info-bg); color: var(--info); }
+        .badge-approved { background: var(--success-bg); color: var(--success); }
+        .badge-notes_requested { background: var(--danger-bg); color: var(--danger); }
+        .badge-ready { background: var(--success-bg); color: var(--success); }
+        .badge-compiling, .badge-generating { background: var(--info-bg); color: var(--info); }
+        .badge-paused { background: var(--danger-bg); color: var(--danger); }
+
+        /* ── Forms ──────────────────────────── */
+        .form-group { margin-bottom: 1rem; }
+        .form-group label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.35rem;
+        }
+        input[type="text"], textarea, select {
+            width: 100%;
+            padding: 0.6rem 0.9rem;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.88rem;
+            transition: var(--transition);
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        textarea { min-height: 100px; resize: vertical; }
+
+        /* ── Modal ──────────────────────────── */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            width: 90%;
+            max-width: 550px;
+            box-shadow: var(--shadow);
+            animation: modalIn 0.25s ease;
+        }
+        @keyframes modalIn { from { opacity:0; transform: translateY(20px); } }
+        .modal h2 { margin-bottom: 1.25rem; font-size: 1.2rem; }
+        .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+
+        /* ── Book List ──────────────────────── */
+        .book-list { display: grid; gap: 1rem; }
+        .book-card { cursor: pointer; }
+        .book-card .book-meta {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        /* ── Detail View ────────────────────── */
+        .detail-view { display: none; }
+        .detail-view.active { display: block; }
+        .back-btn { margin-bottom: 1rem; }
+
+        .section { margin-bottom: 1.5rem; }
+        .section-title {
+            font-size: 0.92rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .outline-box {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 1rem;
+            white-space: pre-wrap;
+            font-size: 0.88rem;
+            line-height: 1.7;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        /* ── Chapter List ───────────────────── */
+        .chapter-item {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            margin-bottom: 0.6rem;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+        .chapter-item:hover { border-color: var(--accent); }
+        .chapter-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.8rem 1rem;
+            cursor: pointer;
+        }
+        .chapter-header span { font-weight: 500; font-size: 0.9rem; }
+        .chapter-body {
+            display: none;
+            padding: 0 1rem 1rem;
+            border-top: 1px solid var(--border);
+        }
+        .chapter-body.open { display: block; padding-top: 1rem; }
+        .chapter-content {
+            background: var(--bg-primary);
+            border-radius: var(--radius-sm);
+            padding: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-size: 0.85rem;
+            line-height: 1.7;
+            margin-bottom: 1rem;
+        }
+        .chapter-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* ── Toast Notifications ────────────── */
+        .toast-container {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            z-index: 300;
+        }
+        .toast {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 0.75rem 1.2rem;
+            font-size: 0.85rem;
+            box-shadow: var(--shadow);
+            animation: toastIn 0.3s ease;
+            max-width: 380px;
+        }
+        .toast-success { border-left: 3px solid var(--success); }
+        .toast-error { border-left: 3px solid var(--danger); }
+        .toast-info { border-left: 3px solid var(--info); }
+        @keyframes toastIn { from { opacity:0; transform: translateX(40px); } }
+
+        /* ── Spinner ────────────────────────── */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--text-muted);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 250;
+            align-items: center;
+            justify-content: center;
+        }
+        .loading-overlay.active { display: flex; }
+        .loading-box {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 2rem 3rem;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+        .loading-box .spinner { width: 32px; height: 32px; border-width: 3px; margin-bottom: 1rem; }
+        .loading-box p { color: var(--text-secondary); font-size: 0.9rem; }
+
+        /* ── Responsive ─────────────────────── */
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            .header { padding: 1rem; }
+            .card { padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <h1>📚 Book Generator</h1>
+        <div class="header-actions">
+            <button class="btn btn-primary" onclick="openNewBookModal()">+ New Book</button>
+            <button class="btn" onclick="openImportModal()">📁 Import Excel</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Book List View -->
+        <div id="bookListView">
+            <div class="book-list" id="bookList">
+                <p style="color:var(--text-muted);text-align:center;padding:3rem;">Loading books...</p>
+            </div>
+        </div>
+
+        <!-- Book Detail View -->
+        <div id="bookDetailView" class="detail-view">
+            <button class="btn back-btn" onclick="showBookList()">← Back to Books</button>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title" id="detailTitle"></h2>
+                    <span id="detailOutlineStatus"></span>
+                </div>
+
+                <!-- Outline Section -->
+                <div class="section">
+                    <div class="section-title">📝 Outline</div>
+                    <div id="outlineSection"></div>
+                </div>
+
+                <!-- Chapters Section -->
+                <div class="section">
+                    <div class="section-title">📖 Chapters</div>
+                    <div id="chaptersSection"></div>
+                </div>
+
+                <!-- Compilation Section -->
+                <div class="section">
+                    <div class="section-title">📦 Final Compilation</div>
+                    <div id="compilationSection"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Book Modal -->
+    <div class="modal-overlay" id="newBookModal">
+        <div class="modal">
+            <h2>Create New Book</h2>
+            <div class="form-group">
+                <label for="bookTitle">Title *</label>
+                <input type="text" id="bookTitle" placeholder="Enter book title...">
+            </div>
+            <div class="form-group">
+                <label for="bookNotes">Pre-Outline Notes</label>
+                <textarea id="bookNotes" placeholder="Guidance for outline generation... (required before generating outline)"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn" onclick="closeModal('newBookModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="createBook()">Create Book</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div class="modal-overlay" id="importModal">
+        <div class="modal">
+            <h2>Import from Excel / CSV</h2>
+            <div class="form-group">
+                <label>Upload file (must have a "title" column)</label>
+                <input type="file" id="importFile" accept=".xlsx,.csv" style="padding:0.4rem;">
+            </div>
+            <div class="modal-actions">
+                <button class="btn" onclick="closeModal('importModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="importBooks()">Import</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-box">
+            <div class="spinner"></div>
+            <p id="loadingText">Generating...</p>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+    const API = '';  // Same origin
+
+    // ── State ──────────────────────────────
+    let currentBookId = null;
+    let currentBook = null;
+
+    // ── Helpers ─────────────────────────────
+    async function api(method, path, body = null) {
+        const opts = { method, headers: {} };
+        if (body instanceof FormData) {
+            opts.body = body;
+        } else if (body) {
+            opts.headers['Content-Type'] = 'application/json';
+            opts.body = JSON.stringify(body);
+        }
+        const res = await fetch(API + path, opts);
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ detail: res.statusText }));
+            throw new Error(err.detail || JSON.stringify(err));
+        }
+        if (res.headers.get('content-type')?.includes('application/json')) {
+            return res.json();
+        }
+        return res;
+    }
+
+    function showLoading(text = 'Processing...') {
+        document.getElementById('loadingText').textContent = text;
+        document.getElementById('loadingOverlay').classList.add('active');
+    }
+    function hideLoading() {
+        document.getElementById('loadingOverlay').classList.remove('active');
+    }
+
+    function toast(message, type = 'info') {
+        const el = document.createElement('div');
+        el.className = `toast toast-${type}`;
+        el.textContent = message;
+        document.getElementById('toastContainer').appendChild(el);
+        setTimeout(() => el.remove(), 4000);
+    }
+
+    function badge(status) {
+        const s = (status || 'pending').toLowerCase();
+        return `<span class="badge badge-${s}">${s.replace(/_/g, ' ')}</span>`;
+    }
+
+    function openModal(id) { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+    function openNewBookModal() { openModal('newBookModal'); }
+    function openImportModal() { openModal('importModal'); }
+
+    // ── Book List ───────────────────────────
+    async function loadBooks() {
+        try {
+            const books = await api('GET', '/api/books');
+            const listEl = document.getElementById('bookList');
+            if (!books.length) {
+                listEl.innerHTML = `<div style="text-align:center;padding:4rem;color:var(--text-muted)">
+                    <p style="font-size:2rem;margin-bottom:0.5rem">📚</p>
+                    <p>No books yet. Create one to get started!</p>
+                </div>`;
+                return;
+            }
+            listEl.innerHTML = books.map(b => `
+                <div class="card book-card" onclick="openBook('${b.id}')">
+                    <div class="card-header">
+                        <span class="card-title">${b.title}</span>
+                        ${badge(b.status_outline)}
+                    </div>
+                    <div class="book-meta">
+                        <span>Output: ${badge(b.book_output_status)}</span>
+                        <span style="margin-left:auto;color:var(--text-muted);font-size:0.78rem">
+                            ${new Date(b.created_at).toLocaleDateString()}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) {
+            toast(e.message, 'error');
+        }
+    }
+
+    function showBookList() {
+        currentBookId = null;
+        currentBook = null;
+        document.getElementById('bookListView').style.display = '';
+        document.getElementById('bookDetailView').classList.remove('active');
+        loadBooks();
+    }
+
+    // ── Create / Import ─────────────────────
+    async function createBook() {
+        const title = document.getElementById('bookTitle').value.trim();
+        if (!title) { toast('Title is required.', 'error'); return; }
+        const notes = document.getElementById('bookNotes').value.trim() || null;
+        try {
+            const book = await api('POST', '/api/books', { title, notes_on_outline_before: notes });
+            toast('Book created!', 'success');
+            closeModal('newBookModal');
+            document.getElementById('bookTitle').value = '';
+            document.getElementById('bookNotes').value = '';
+            openBook(book.id);
+        } catch (e) { toast(e.message, 'error'); }
+    }
+
+    async function importBooks() {
+        const fileInput = document.getElementById('importFile');
+        if (!fileInput.files.length) { toast('Select a file.', 'error'); return; }
+        const fd = new FormData();
+        fd.append('file', fileInput.files[0]);
+        try {
+            const result = await api('POST', '/api/books/import', fd);
+            toast(`Imported ${result.books_created} book(s)!`, 'success');
+            closeModal('importModal');
+            loadBooks();
+        } catch (e) { toast(e.message, 'error'); }
+    }
+
+    // ── Book Detail ─────────────────────────
+    async function openBook(bookId) {
+        currentBookId = bookId;
+        document.getElementById('bookListView').style.display = 'none';
+        document.getElementById('bookDetailView').classList.add('active');
+        await refreshBookDetail();
+    }
+
+    async function refreshBookDetail() {
+        try {
+            currentBook = await api('GET', `/api/books/${currentBookId}`);
+            const b = currentBook;
+
+            document.getElementById('detailTitle').textContent = b.title;
+            document.getElementById('detailOutlineStatus').innerHTML = badge(b.status_outline);
+
+            renderOutlineSection(b);
+            await renderChaptersSection(b);
+            renderCompilationSection(b);
+        } catch (e) { toast(e.message, 'error'); }
+    }
+
+    // ── Outline ─────────────────────────────
+    function renderOutlineSection(book) {
+        const el = document.getElementById('outlineSection');
+        let html = '';
+
+        // Pre-outline notes
+        if (book.status_outline === 'pending') {
+            html += `
+                <div class="form-group">
+                    <label>Pre-Outline Notes (required before generation)</label>
+                    <textarea id="preOutlineNotes" placeholder="Enter guidance notes...">${book.notes_on_outline_before || ''}</textarea>
+                </div>
+                <button class="btn btn-primary" onclick="savePreNotesAndGenerate()">
+                    💡 Save Notes & Generate Outline
+                </button>`;
+        } else {
+            // Show outline
+            if (book.outline) {
+                html += `<div class="outline-box">${escapeHtml(book.outline)}</div>`;
+            }
+
+            if (book.status_outline === 'outline_generated' || book.status_outline === 'notes_requested') {
+                html += `
+                    <div style="margin-top:1rem">
+                        <div class="form-group">
+                            <label>Post-Outline Notes (optional — for refinement)</label>
+                            <textarea id="postOutlineNotes" placeholder="Feedback on the outline...">${book.notes_on_outline_after || ''}</textarea>
+                        </div>
+                        <div style="display:flex;gap:0.5rem">
+                            <button class="btn btn-success" onclick="approveOutline()">✓ Approve Outline</button>
+                            <button class="btn btn-primary" onclick="regenerateOutline()">🔄 Regenerate with Notes</button>
+                        </div>
+                    </div>`;
+            } else if (book.status_outline === 'approved') {
+                html += `<p style="margin-top:0.75rem;color:var(--success)">✓ Outline approved</p>`;
+            }
+        }
+        el.innerHTML = html;
+    }
+
+    async function savePreNotesAndGenerate() {
+        const notes = document.getElementById('preOutlineNotes').value.trim();
+        if (!notes) { toast('Pre-outline notes are required.', 'error'); return; }
+        showLoading('Saving notes & generating outline...');
+        try {
+            await api('PATCH', `/api/books/${currentBookId}`, { notes_on_outline_before: notes });
+            await api('POST', `/api/books/${currentBookId}/outline/generate`);
+            toast('Outline generated!', 'success');
+            await refreshBookDetail();
+        } catch (e) { toast(e.message, 'error'); }
+        hideLoading();
+    }
+
+    async function approveOutline() {
+        showLoading('Approving outline...');
+        try {
+            await api('POST', `/api/books/${currentBookId}/outline/approve`, {
+                status_outline: 'approved',
+                notes_on_outline_after: document.getElementById('postOutlineNotes')?.value || null,
+            });
+            toast('Outline approved!', 'success');
+            await refreshBookDetail();
+        } catch (e) { toast(e.message, 'error'); }
+        hideLoading();
+    }
+
+    async function regenerateOutline() {
+        const notes = document.getElementById('postOutlineNotes')?.value.trim() || null;
+        showLoading('Regenerating outline with notes...');
+        try {
+            await api('POST', `/api/books/${currentBookId}/outline/approve`, {
+                status_outline: 'notes_requested',
+                notes_on_outline_after: notes,
+            });
+            toast('Outline regenerated!', 'success');
+            await refreshBookDetail();
+        } catch (e) { toast(e.message, 'error'); }
+        hideLoading();
+    }
+
+    // ── Chapters ────────────────────────────
+    async function renderChaptersSection(book) {
+        const el = document.getElementById('chaptersSection');
+
+        if (book.status_outline !== 'approved') {
+            el.innerHTML = `<p style="color:var(--text-muted)">Approve the outline first to work with chapters.</p>`;
+            return;
+        }
+
+        let chapters = [];
+        try { chapters = await api('GET', `/api/books/${currentBookId}/chapters`); } catch (e) {}
+
+        if (!chapters.length) {
+            el.innerHTML = `<p style="color:var(--text-muted)">No chapters found.</p>`;
+            return;
+        }
+
+        let html = `
+            <div style="display:flex;gap:0.5rem;margin-bottom:1rem">
+                <button class="btn btn-primary btn-sm" onclick="generateNextChapter()">⚡ Generate Next Chapter</button>
+                <button class="btn btn-sm" onclick="generateAllChapters()">🔄 Generate All Remaining</button>
+            </div>`;
+
+        html += chapters.map(ch => `
+            <div class="chapter-item">
+                <div class="chapter-header" onclick="toggleChapter(this)">
+                    <span>Ch ${ch.chapter_number}: ${ch.title || 'Untitled'}</span>
+                    ${badge(ch.status)}
+                </div>
+                <div class="chapter-body" id="chBody-${ch.chapter_number}">
+                    ${ch.content ? `<div class="chapter-content">${escapeHtml(ch.content)}</div>` : '<p style="color:var(--text-muted);margin-bottom:1rem">Not yet generated</p>'}
+                    ${ch.summary ? `<p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:1rem"><b>Summary:</b> ${escapeHtml(ch.summary)}</p>` : ''}
+                    <div class="form-group">
+                        <label>Chapter Notes</label>
+                        <textarea id="chNotes-${ch.chapter_number}" placeholder="Notes for this chapter...">${ch.chapter_notes || ''}</textarea>
+                    </div>
+                    <div class="chapter-actions">
+                        <button class="btn btn-success btn-sm" onclick="approveChapter(${ch.chapter_number})">✓ Approve</button>
+                        <button class="btn btn-primary btn-sm" onclick="regenerateChapter(${ch.chapter_number})">🔄 Regenerate</button>
+                        <button class="btn btn-sm" onclick="saveChapterNotes(${ch.chapter_number})">💾 Save Notes</button>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        el.innerHTML = html;
+    }
+
+    function toggleChapter(header) {
+        const body = header.nextElementSibling;
+        body.classList.toggle('open');
+    }
+
+    async function generateNextChapter() {
+        showLoading('Generating next chapter...');
+        try {
+            await api('POST', `/api/books/${currentBookId}/chapters/generate`);
+            toast('Chapter generated!', 'success');
+            await refreshBookDetail();
+        } catch (e) { toast(e.message, 'error'); }
+        hideLoading();
+    }
+
+    async function generateAllChapters() {
+        showLoading('Generating all remaining chapters... This may take a while.');
+        try {
+            await api('POST', `/api/books/${currentBookId}/chapters/generate-all`);
+            toast('All chapters generated!', 'success');
+            await refreshBookDetail();
+        } catch (e) { toast(e.message, 'error'); }
+        hideLoading();
+    }
+
+    async function regenerateChapter(num) {
+        const notes = document.getElementById(`chNotes-${num}`)?.value.trim() || null;
+        showLoading(`Regenerating Chapter ${num}...`);
+        try {
+            if (notes) {
+                await api('PATCH', `/api/books/${currentBookId}/chapters/${num}`, {
+                    chapter_notes: notes,
+                    chapter_notes_status: 'yes',
+                });
+            }
+            await api('POST', `/api/books/${currentBookId}/chapters/generate/${num}`);
+            toast(`Chapter ${num} regenerated!`, 'success');
+            await refreshBookDetail();
+        } catch (e) { toast(e.message, 'error'); }
+        hideLoading();
+    }
+
+    async function approveChapter(num) {
+        try {
+            await api('PATCH', `/api/books/${currentBookId}/chapters/${num}`, {
+                chapter_notes_status: 'no_notes_needed',
+            });
+            toast(`Chapter ${num} approved!`, 'success');
+            await refreshBookDetail();
+        } catch (e) { toast(e.message, 'error'); }
+    }
+
+    async function saveChapterNotes(num) {
+        const notes = document.getElementById(`chNotes-${num}`)?.value.trim() || '';
+        try {
+            await api('PATCH', `/api/books/${currentBookId}/chapters/${num}`, {
+                chapter_notes: notes,
+                chapter_notes_status: 'yes',
+            });
+            toast(`Notes saved for Chapter ${num}`, 'success');
+        } catch (e) { toast(e.message, 'error'); }
+    }
+
+    // ── Compilation ─────────────────────────
+    function renderCompilationSection(book) {
+        const el = document.getElementById('compilationSection');
+
+        if (book.book_output_status === 'ready' && book.output_file_url) {
+            el.innerHTML = `
+                <p style="color:var(--success);margin-bottom:1rem">✅ Book compiled and ready!</p>
+                <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+                    <a href="/api/books/${currentBookId}/download?format=docx" class="btn btn-primary btn-sm">📄 Download .docx</a>
+                    <a href="/api/books/${currentBookId}/download?format=pdf" class="btn btn-sm">📕 Download .pdf</a>
+                    <a href="/api/books/${currentBookId}/download?format=txt" class="btn btn-sm">📝 Download .txt</a>
+                    <button class="btn btn-sm" onclick="recompile()">🔄 Recompile</button>
+                </div>`;
+            return;
+        }
+
+        let html = `
+            <div class="form-group">
+                <label>Final Review Notes Status</label>
+                <select id="finalStatus">
+                    <option value="no_notes_needed" ${book.final_review_notes_status === 'no_notes_needed' ? 'selected' : ''}>No notes needed</option>
+                    <option value="yes" ${book.final_review_notes_status === 'yes' ? 'selected' : ''}>Notes provided</option>
+                    <option value="no" ${book.final_review_notes_status === 'no' ? 'selected' : ''}>Not ready</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Final Review Notes</label>
+                <textarea id="finalNotes" placeholder="Any final notes before compilation...">${book.final_review_notes || ''}</textarea>
+            </div>
+            <div class="form-group">
+                <label>Export Format</label>
+                <select id="exportFormat">
+                    <option value="docx">Word (.docx)</option>
+                    <option value="pdf">PDF (.pdf)</option>
+                    <option value="txt">Text (.txt)</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="compileBook()">📦 Compile Final Draft</button>`;
+
+        el.innerHTML = html;
+    }
+
+    async function compileBook() {
+        const finalStatus = document.getElementById('finalStatus').value;
+        const finalNotes = document.getElementById('finalNotes').value.trim() || null;
+        const format = document.getElementById('exportFormat').value;
+
+        showLoading('Compiling final draft...');
+        try {
+            // Save final review settings
+            await api('PATCH', `/api/books/${currentBookId}`, {
+                final_review_notes_status: finalStatus,
+                final_review_notes: finalNotes,
+            });
+            // Compile
+            await api('POST', `/api/books/${currentBookId}/compile`, { format });
+            toast('Book compiled successfully!', 'success');
+            await refreshBookDetail();
+        } catch (e) { toast(e.message, 'error'); }
+        hideLoading();
+    }
+
+    async function recompile() {
+        showLoading('Recompiling...');
+        try {
+            await api('POST', `/api/books/${currentBookId}/compile`, { format: 'docx' });
+            toast('Recompiled!', 'success');
+            await refreshBookDetail();
+        } catch (e) { toast(e.message, 'error'); }
+        hideLoading();
+    }
+
+    // ── Utils ───────────────────────────────
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str || '';
+        return div.innerHTML;
+    }
+
+    // ── Init ────────────────────────────────
+    loadBooks();
+    </script>
+</body>
+</html>
