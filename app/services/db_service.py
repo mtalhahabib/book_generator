@@ -151,6 +151,58 @@ def update_chapter(chapter_id: str | UUID, updates: dict[str, Any]) -> dict:
     return result.data[0]
 
 
+# ── Sections ──────────────────────────────────────────────────────────────────
+
+
+def create_sections(chapter_id: str | UUID, section_titles: list[str]) -> list[dict]:
+    """Insert multiple pending sections for a chapter."""
+    payloads = [
+        {
+            "chapter_id": str(chapter_id),
+            "title": title,
+            "status": "pending",
+            "order_index": i,
+        }
+        for i, title in enumerate(section_titles)
+    ]
+    result = _client().table("sections").insert(payloads).execute()
+    return result.data
+
+
+def get_sections_for_chapter(chapter_id: str | UUID) -> list[dict]:
+    """Fetch all sections for a chapter ordered by order_index."""
+    result = (
+        _client()
+        .table("sections")
+        .select("*")
+        .eq("chapter_id", str(chapter_id))
+        .order("order_index")
+        .execute()
+    )
+    return result.data
+
+
+def update_section(section_id: str | UUID, updates: dict[str, Any]) -> dict:
+    """Patch a section row."""
+    result = (
+        _client()
+        .table("sections")
+        .update(updates)
+        .eq("id", str(section_id))
+        .execute()
+    )
+    return result.data[0]
+
+
+def delete_sections_for_chapter(chapter_id: str | UUID) -> None:
+    """Delete all section rows for a chapter.
+
+    Called before re-saving freshly parsed sections to avoid duplicates
+    when a chapter is regenerated.
+    """
+    _client().table("sections").delete().eq("chapter_id", str(chapter_id)).execute()
+
+
 # ── Notification Log ──────────────────────────────────────────────────────────
 
 

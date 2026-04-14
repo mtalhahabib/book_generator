@@ -17,13 +17,18 @@ router = APIRouter(prefix="/api/books/{book_id}", tags=["Compilation"])
 
 
 @router.post("/compile", response_model=CompilationResponse)
-def compile_book(book_id: UUID, body: CompilationRequest = CompilationRequest()):
+def compile_book(
+    book_id: UUID,
+    body: CompilationRequest = CompilationRequest(),
+    force: bool = False
+):
     """Trigger final compilation of the book.
 
-    Requires all chapters to be approved and final review gating to pass.
+    Requires all chapters to be approved and final review gating to pass,
+    unless `force=true` is provided in the query params.
     """
     try:
-        updated = compilation_pipeline.compile_book(str(book_id), body.format)
+        updated = compilation_pipeline.compile_book(str(book_id), body.format, force)
         return CompilationResponse(
             book_id=book_id,
             status=BookOutputStatus(updated["book_output_status"]),

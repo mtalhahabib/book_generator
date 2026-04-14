@@ -13,7 +13,7 @@ from app.models.schemas import (
     ImportResult,
     MessageResponse,
 )
-from app.services import db_service, input_service
+from app.services import db_service, input_service, llm_service
 
 router = APIRouter(prefix="/api/books", tags=["Books"])
 

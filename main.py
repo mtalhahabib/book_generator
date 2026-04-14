@@ -71,8 +71,20 @@ def health_check():
     return {"status": "ok", "service": "book-generator"}
 
 
+@app.get("/api/quota-stats", tags=["System"])
+def quota_stats():
+    """Live Gemini quota diagnostics.
+
+    Returns cache hit rate and per-model rate-limiter state.
+    Useful for monitoring free-tier consumption without opening Google Cloud console.
+    """
+    from app.services.llm_service import get_quota_stats
+    return get_quota_stats()
+
+
 @app.get("/", tags=["System"])
 def root():
     """Redirect to dashboard."""
     from fastapi.responses import RedirectResponse
     return RedirectResponse(url="/static/index.html")
+

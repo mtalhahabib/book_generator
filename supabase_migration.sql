@@ -45,6 +45,20 @@ CREATE TABLE IF NOT EXISTS chapters (
     UNIQUE(book_id, chapter_number)
 );
 
+-- ── Sections ─────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS sections (
+    id                  UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    chapter_id          UUID NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+    title               TEXT NOT NULL,
+    content             TEXT,
+    status              TEXT NOT NULL DEFAULT 'pending'
+                        CHECK (status IN ('pending', 'generating', 'done')),
+    order_index         INT NOT NULL,
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- ── Notification Log ─────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS notification_log (
@@ -59,6 +73,7 @@ CREATE TABLE IF NOT EXISTS notification_log (
 -- ── Indexes ──────────────────────────────────────────────────
 
 CREATE INDEX IF NOT EXISTS idx_chapters_book_id ON chapters(book_id);
+CREATE INDEX IF NOT EXISTS idx_sections_chapter_id ON sections(chapter_id);
 CREATE INDEX IF NOT EXISTS idx_notification_log_book_id ON notification_log(book_id);
 
 -- ── Auto-update updated_at ───────────────────────────────────
@@ -79,10 +94,15 @@ CREATE TRIGGER trg_chapters_updated_at
     BEFORE UPDATE ON chapters
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+CREATE TRIGGER trg_sections_updated_at
+    BEFORE UPDATE ON sections
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
 -- ── Enable Row Level Security (optional, recommended) ────────
 
 ALTER TABLE books ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chapters ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notification_log ENABLE ROW LEVEL SECURITY;
 
 -- Allow all operations for authenticated users (adjust as needed)
@@ -90,6 +110,9 @@ CREATE POLICY "Allow all for authenticated" ON books
     FOR ALL USING (true) WITH CHECK (true);
 
 CREATE POLICY "Allow all for authenticated" ON chapters
+    FOR ALL USING (true) WITH CHECK (true);
+
+CREATE POLICY "Allow all for authenticated" ON sections
     FOR ALL USING (true) WITH CHECK (true);
 
 CREATE POLICY "Allow all for authenticated" ON notification_log

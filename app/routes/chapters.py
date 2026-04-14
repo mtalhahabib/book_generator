@@ -77,12 +77,7 @@ def generate_specific_chapter(book_id: UUID, chapter_number: int):
 
 @router.post("/generate-all", response_model=list[ChapterResponse])
 def generate_all_chapters(book_id: UUID):
-    """Generate all remaining chapters sequentially.
-
-    Respects gating:
-    - Chapters with chapter_notes_status='yes' will be skipped (waiting).
-    - Already approved chapters are skipped.
-    """
+    """Generate all remaining chapters sequentially."""
     try:
         results = chapter_pipeline.generate_all_chapters(str(book_id))
         return results
@@ -90,6 +85,79 @@ def generate_all_chapters(book_id: UUID):
         raise HTTPException(400, str(exc))
     except Exception as exc:
         raise HTTPException(500, f"Chapter generation failed: {exc}")
+
+
+@router.post("/approve-all", response_model=list[ChapterResponse])
+def approve_all_chapters(book_id: UUID):
+    """Bulk-approve all generated chapters in one call.
+
+    Sets chapter_notes_status='no_notes_needed' and status='approved'
+    for every chapter that is currently in 'generated' state.
+    After this, POST /api/books/{id}/compile will succeed immediately.
+    """
+    chapters = db_service.get_chapters_for_book(str(book_id))
+    if not chapters:
+        raise HTTPException(400, "No chapters found.")
+
+    from app.models.enums import ChapterStatus, NotesStatus
+    updated = []
+    for ch in chapters:
+        if ch.get("status") == ChapterStatus.GENERATED.value:
+            result = db_service.update_chapter(ch["id"], {
+                "status": ChapterStatus.APPROVED.value,
+                "chapter_notes_status": NotesStatus.NO_NOTES_NEEDED.value,
+            })
+            updated.append(result)
+        else:
+            updated.append(ch)
+
+    return updated
+
+
+
+
+@router.post("/generate-all-batch")
+def generate_all_chapters_batch(book_id: UUID):
+    """Submit ALL pending chapters to the Gemini Batch API in one job.
+
+    Unlike /generate-all (sequential, RPM-limited), the Batch API submits
+    every chapter simultaneously with no RPM constraints. Results arrive
+    asynchronously — poll /batch-status to check progress.
+
+    Returns: { status, job_name, count, chapters }
+    """
+    try:
+        result = chapter_pipeline.generate_all_chapters_batch(str(book_id))
+        return result
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    except Exception as exc:
+        raise HTTPException(500, f"Batch submission failed: {exc}")
+
+
+@router.get("/batch-status")
+def get_batch_status(book_id: UUID):
+    """Poll the Batch API job for this book and save any completed chapters.
+
+    Call this endpoint periodically after POST /generate-all-batch.
+    When done=true, all chapters have been saved to the database.
+
+    Returns: { status, done, saved }
+    """
+    from app.services import db_service
+    book = db_service.get_book(str(book_id))
+    if not book:
+        raise HTTPException(404, "Book not found.")
+
+    job_name = book.get("batch_job_name")
+    if not job_name:
+        raise HTTPException(400, "No batch job found for this book. Submit one first via POST /generate-all-batch.")
+
+    try:
+        result = chapter_pipeline.process_batch_results(str(book_id), job_name)
+        return result
+    except Exception as exc:
+        raise HTTPException(500, f"Batch polling failed: {exc}")
 
 
 @router.patch("/{chapter_number}", response_model=ChapterResponse)

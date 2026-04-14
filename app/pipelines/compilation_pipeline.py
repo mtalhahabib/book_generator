@@ -10,20 +10,13 @@ from app.services import db_service, export_service, notification_service
 logger = logging.getLogger(__name__)
 
 
-def compile_book(book_id: str, fmt: str = "docx") -> dict:
+def compile_book(book_id: str, fmt: str = "docx", force: bool = False) -> dict:
     """Compile all approved chapters into a final draft.
-
-    Gating:
-        - All chapters must be approved.
-        - final_review_notes_status must be 'no_notes_needed' OR
-          final_review_notes must exist.
 
     Args:
         book_id: Book UUID.
         fmt: Export format — 'docx', 'pdf', or 'txt'.
-
-    Returns:
-        Updated book record with output_file_url.
+        force: If True, skip approval gating and compile all generated chapters.
     """
     book = db_service.get_book(book_id)
     if not book:
@@ -34,55 +27,44 @@ def compile_book(book_id: str, fmt: str = "docx") -> dict:
     if not chapters:
         raise ValueError("Cannot compile: No chapters exist for this book. Please generate chapters first.")
 
-    # Verify all chapters are approved
-    unapproved = [
-        ch for ch in chapters
-        if ch.get("status") != ChapterStatus.APPROVED.value
-    ]
-    if unapproved:
-        chapter_nums = [ch["chapter_number"] for ch in unapproved]
-        notification_service.notify(
-            "error_pause",
-            book_id,
-            {
-                "title": book["title"],
-                "message": (
-                    f"Cannot compile — chapters {chapter_nums} are not approved."
-                ),
-            },
-        )
-        raise ValueError(
-            f"Chapters {chapter_nums} are not yet approved. "
-            "Approve all chapters before compiling."
-        )
+    if not force:
+        # Verify all chapters are approved
+        unapproved = [
+            ch for ch in chapters
+            if ch.get("status") != ChapterStatus.APPROVED.value
+        ]
+        if unapproved:
+            chapter_nums = [ch["chapter_number"] for ch in unapproved]
+            notification_service.notify(
+                "error_pause",
+                book_id,
+                {
+                    "title": book["title"],
+                    "message": (
+                        f"Cannot compile — chapters {chapter_nums} are not approved."
+                    ),
+                },
+            )
+            raise ValueError(
+                f"Chapters {chapter_nums} are not yet approved. "
+                "Approve all chapters first, or use force=true to compile anyway."
+            )
 
-    # Check final review gating
-    final_status = book.get("final_review_notes_status")
-    final_notes = book.get("final_review_notes")
+        # Check final review gating
+        final_status = book.get("final_review_notes_status")
+        final_notes  = book.get("final_review_notes")
 
-    if final_status == FinalReviewStatus.YES.value and not final_notes:
-        db_service.update_book(book_id, {
-            "book_output_status": BookOutputStatus.PAUSED.value,
-        })
-        notification_service.notify(
-            "error_pause",
-            book_id,
-            {
-                "title": book["title"],
-                "message": "Final review notes requested but not provided.",
-            },
-        )
-        raise ValueError(
-            "final_review_notes_status is 'yes' but no notes provided."
-        )
+        if final_status == FinalReviewStatus.YES.value and not final_notes:
+            db_service.update_book(book_id, {"book_output_status": BookOutputStatus.PAUSED.value})
+            notification_service.notify(
+                "error_pause", book_id,
+                {"title": book["title"], "message": "Final review notes requested but not provided."},
+            )
+            raise ValueError("final_review_notes_status is 'yes' but no notes provided.")
 
-    if final_status == FinalReviewStatus.NO.value:
-        db_service.update_book(book_id, {
-            "book_output_status": BookOutputStatus.PAUSED.value,
-        })
-        raise ValueError(
-            "final_review_notes_status is 'no' — pipeline paused."
-        )
+        if final_status == FinalReviewStatus.NO.value:
+            db_service.update_book(book_id, {"book_output_status": BookOutputStatus.PAUSED.value})
+            raise ValueError("final_review_notes_status is 'no' — pipeline paused.")
 
     # Mark as compiling
     db_service.update_book(book_id, {
